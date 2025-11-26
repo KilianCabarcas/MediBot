@@ -1,0 +1,57 @@
+
+
+services:
+  vector-db:
+    image: chromadb/chroma
+    container_name: vector-db
+    ports:
+      - "8001:8000" 
+    volumes:
+      - chroma_data:/chroma/chroma
+    networks:
+      - medibot-network
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+      - ./ollama-entrypoint.sh:/entrypoint.sh
+    entrypoint: ["/usr/bin/bash", "/entrypoint.sh"]
+    networks:
+      - medibot-network
+
+  api-rag:
+    build: ./backend
+    container_name: api-rag
+    ports:
+      - "8000:8000"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - CHROMA_HOST=vector-db
+      - CHROMA_PORT=8000
+    depends_on:
+      - vector-db
+      - ollama
+    networks:
+      - medibot-network
+
+  chatbot-ui:
+    build: ./frontend
+    container_name: chatbot-ui
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api-rag
+    networks:
+      - medibot-network
+
+networks:
+  medibot-network:
+    driver: bridge
+
+volumes:
+  chroma_data:
+  ollama_data:
