@@ -99,6 +99,87 @@ export default function Home() {
     }
   };
 
+  const [systemStatus, setSystemStatus] = useState<'checking' | 'ready' | 'installing' | 'unavailable'>('checking');
+  const [statusDetails, setStatusDetails] = useState<string>('');
+
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const response = await axios.get('http://localhost:8000/api/status');
+        const { status, details } = response.data;
+        setSystemStatus(status);
+        setStatusDetails(details);
+      } catch (error) {
+        console.error('Error checking system status:', error);
+        setSystemStatus('unavailable');
+        setStatusDetails('Could not connect to the backend server.');
+      }
+    };
+
+    // Initial check
+    checkStatus();
+
+    // Poll every 5 seconds if not ready
+    const interval = setInterval(() => {
+      if (systemStatus !== 'ready') {
+        checkStatus();
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [systemStatus]);
+
+
+
+  if (systemStatus !== 'ready') {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center bg-slate-50 font-sans text-slate-900 p-6">
+        <div className="flex flex-col items-center max-w-md text-center space-y-6">
+          <div className="relative">
+            <div className="absolute inset-0 animate-ping rounded-full bg-teal-200 opacity-75"></div>
+            <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-teal-100 text-teal-600">
+              {systemStatus === 'checking' ? (
+                <Loader2 size={40} className="animate-spin" />
+              ) : systemStatus === 'installing' ? (
+                <Upload size={40} className="animate-bounce" />
+              ) : (
+                <Activity size={40} />
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold text-slate-800">
+              {systemStatus === 'checking' && 'Conectando con MediBot...'}
+              {systemStatus === 'installing' && 'Instalando Modelos de IA...'}
+              {systemStatus === 'unavailable' && 'Sistema No Disponible'}
+            </h1>
+            <p className="text-slate-500">
+              {statusDetails || 'Por favor espere mientras verificamos el estado del sistema.'}
+            </p>
+          </div>
+
+          {systemStatus === 'unavailable' && (
+            <div className="rounded-lg bg-red-50 p-4 text-sm text-red-700 border border-red-100">
+              <p className="font-semibold">Posibles causas:</p>
+              <ul className="list-disc list-inside mt-1 space-y-1 text-left">
+                <li>El servidor backend no se está ejecutando.</li>
+                <li>Ollama no está instalado o no se está ejecutando.</li>
+                <li>Problemas de conexión de red.</li>
+              </ul>
+              <button
+                onClick={() => window.location.reload()}
+                className="mt-4 w-full rounded-md bg-red-100 px-4 py-2 font-medium text-red-700 hover:bg-red-200 transition-colors"
+              >
+                Reintentar
+              </button>
+            </div>
+          )}
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="flex min-h-screen flex-col bg-slate-50 font-sans text-slate-900">
       {/* Header */}
@@ -149,7 +230,7 @@ export default function Home() {
               <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-teal-50 text-teal-600 ring-8 ring-teal-50/50">
                 <Activity size={48} />
               </div>
-              <h2 className="text-2xl font-bold text-slate-800">Bienvenido a MediBot</h2>
+              <h2 className="text-2xl font-bold text-slate-800">¡Bienvenido a MediBot AI!</h2>
               <p className="mt-2 max-w-md text-slate-500">
                 Tu asistente para consultas rápidas sobre protocolos y guías médicas.
                 Sube tus documentos para empezar.
@@ -223,7 +304,7 @@ export default function Home() {
                 </div>
                 <div className="flex items-center gap-3 text-slate-500">
                   <Loader2 className="animate-spin text-teal-600" size={18} />
-                  <span className="text-sm font-medium">Analizando documentos...</span>
+                  <span className="text-sm font-medium">Analizando Mensaje ...</span>
                 </div>
               </div>
             </div>

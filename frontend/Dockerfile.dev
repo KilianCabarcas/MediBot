@@ -1,0 +1,7 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies on container start
+# This ensures native modules are built for the container's architecture
+CMD ["sh", "-c", "npm install && npm run dev"]

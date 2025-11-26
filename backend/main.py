@@ -118,16 +118,13 @@ async def chat(request: ChatRequest):
 Nunca debes dar un diagnóstico directo o reemplazar la consulta profesional. 
 
 Usa el siguiente contexto para responder a la pregunta del usuario.
-Si no sabes la respuesta, di que no lo sabes, no inventes.
+Si no sabes la respuesta, di que no lo sabes, no inventes  y responde cualquier tipo de pregunta.
 
 Contexto:
 {context}
 
 Pregunta:
 {question}
-
-Debes terminar SIEMPRE tu respuesta con el siguiente descargo de responsabilidad: 
-'Esta información es solo de apoyo. Consulte a un profesional médico para un diagnóstico y tratamiento.'
 """
         prompt = ChatPromptTemplate.from_template(template)
 
@@ -145,3 +142,41 @@ Debes terminar SIEMPRE tu respuesta con el siguiente descargo de responsabilidad
         # Log the error for debugging
         print(f"Error in chat endpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/status")
+async def get_status():
+    """
+    Checks the status of the AI system (Ollama).
+    Returns:
+        - ready: Ollama is reachable and models are pulled.
+        - installing: Ollama is reachable but models are missing (user might need to pull).
+        - unavailable: Ollama is not reachable.
+    """
+    import requests
+    
+    try:
+        # Check if Ollama is reachable
+        response = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=2)
+        if response.status_code == 200:
+            models_data = response.json()
+            models = [m['name'] for m in models_data.get('models', [])]
+            
+            # Check for required models (fuzzy match because tags can vary, e.g., llama3:latest)
+            has_llm = any(LLM_MODEL in m for m in models)
+            has_embedding = any(EMBEDDING_MODEL in m for m in models)
+            
+            if has_llm and has_embedding:
+                return {"status": "ready", "details": "System is fully operational."}
+            else:
+                missing = []
+                if not has_llm: missing.append(LLM_MODEL)
+                if not has_embedding: missing.append(EMBEDDING_MODEL)
+                return {
+                    "status": "installing", 
+                    "details": f"Ollama is running but models are missing: {', '.join(missing)}. Please wait or pull them manually."
+                }
+        else:
+             return {"status": "unavailable", "details": "Ollama service returned non-200 status."}
+            
+    except Exception as e:
+        return {"status": "unavailable", "details": f"Could not connect to Ollama: {str(e)}"}
