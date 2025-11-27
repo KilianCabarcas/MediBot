@@ -65,5 +65,4 @@ El proyecto consta de 4 contenedores orquestados por Docker Compose:
 
 **MediBot es una herramienta de apoyo informativo.** No sustituye el juicio clínico profesional. Consulte siempre a un médico calificado para diagnóstico y tratamiento.
 
----
-Desarrollado con ❤️ para la IA Aplicada.
+
